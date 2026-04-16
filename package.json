@@ -1,0 +1,73 @@
+{
+  "name": "ivkjs",
+  "version": "0.1.0",
+  "description": "The .ivk format parser, script sandbox, and HTTP runner — core of the Invoker API client.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\" \"*.md\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"*.md\"",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run lint && npm run typecheck && npm run test && npm run build"
+  },
+  "keywords": [
+    "ivk",
+    "ivkjs",
+    "invoker",
+    "api-client",
+    "http-client",
+    "rest-client",
+    "bruno",
+    "postman"
+  ],
+  "author": {
+    "name": "Doston Kamilov",
+    "url": "https://github.com/doossee"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/doossee/ivkjs.git"
+  },
+  "bugs": {
+    "url": "https://github.com/doossee/ivkjs/issues"
+  },
+  "homepage": "https://github.com/doossee/ivkjs#readme",
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "@vitest/coverage-v8": "^2.1.8",
+    "eslint": "^9.17.0",
+    "prettier": "^3.4.2",
+    "tsup": "^8.3.5",
+    "typescript": "5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "sideEffects": false
+}
