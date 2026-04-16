@@ -85,19 +85,13 @@ describe('ScriptRunner', () => {
   describe('test scripts', () => {
     it('runs passing tests', () => {
       const res = makeResponse();
-      const results = runner.runTests(
-        'test("ok", () => expect(res.status).toBe(200));',
-        res,
-      );
+      const results = runner.runTests('test("ok", () => expect(res.status).toBe(200));', res);
       expect(results).toEqual([{ name: 'ok', passed: true }]);
     });
 
     it('records failing tests with error messages', () => {
       const res = makeResponse();
-      const results = runner.runTests(
-        'test("wrong", () => expect(res.status).toBe(500));',
-        res,
-      );
+      const results = runner.runTests('test("wrong", () => expect(res.status).toBe(500));', res);
       expect(results[0]!.passed).toBe(false);
       expect(results[0]!.error).toContain('Expected 500');
     });

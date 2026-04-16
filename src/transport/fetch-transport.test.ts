@@ -74,7 +74,9 @@ describe('FetchTransport', () => {
     fetchMock.mockImplementationOnce(
       (_url, init) =>
         new Promise((_resolve, reject) => {
-          init?.signal?.addEventListener('abort', () => reject(new Error('The operation was aborted')));
+          init?.signal?.addEventListener('abort', () =>
+            reject(new Error('The operation was aborted')),
+          );
         }),
     );
     const transport = new FetchTransport();

@@ -58,7 +58,10 @@ export class RequestRunner {
     // Try to parse body as JSON; fall back to string
     let parsedBody: unknown = normalizedRes.body;
     const contentType = normalizedRes.headers['content-type'] ?? '';
-    if (contentType.includes('application/json') || (normalizedRes.body && /^\s*[{[]/.test(normalizedRes.body))) {
+    if (
+      contentType.includes('application/json') ||
+      (normalizedRes.body && /^\s*[{[]/.test(normalizedRes.body))
+    ) {
       try {
         parsedBody = JSON.parse(normalizedRes.body);
       } catch {

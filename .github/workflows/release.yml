@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  release:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm run build
+      - name: Publish to npm
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          version="${tag#v}"
+          notes_file="$(mktemp)"
+          if grep -q "## \[${version}\]" CHANGELOG.md; then
+            awk -v ver="${version}" '
+              /^## \[/ {
+                if (found) exit
+                if ($0 ~ "\\[" ver "\\]") { found = 1; next }
+              }
+              found { print }
+            ' CHANGELOG.md > "${notes_file}"
+          else
+            echo "Release ${tag}" > "${notes_file}"
+          fi
+          gh release create "${tag}" --title "${tag}" --notes-file "${notes_file}"

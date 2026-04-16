@@ -99,8 +99,7 @@ export class ScriptRunner {
           throw new Error(`Expected "${actual}" to contain "${sub}"`);
       },
       toBeGreaterThan: (n: number) => {
-        if (typeof actual !== 'number' || actual <= n)
-          throw new Error(`Expected ${actual} > ${n}`);
+        if (typeof actual !== 'number' || actual <= n) throw new Error(`Expected ${actual} > ${n}`);
       },
     });
 

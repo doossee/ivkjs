@@ -33,11 +33,7 @@ function makeRequest(overrides: Partial<IvkRequest> = {}): IvkRequest {
 class StubTransport implements HttpTransport {
   public calls: { method: string; url: string; body?: string }[] = [];
   constructor(private response: NormalizedResponse) {}
-  async send(req: {
-    method: string;
-    url: string;
-    body?: string;
-  }): Promise<NormalizedResponse> {
+  async send(req: { method: string; url: string; body?: string }): Promise<NormalizedResponse> {
     this.calls.push({ method: req.method, url: req.url, body: req.body });
     return this.response;
   }
