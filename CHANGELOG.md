@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.1] — 2026-05-03
+
+### Fixed
+
+- `parseIvk` now supports multi-line `@directive` values. Previous behaviour treated continuation lines as garbage HTTP headers and dumped the actual request line into `body`, producing a fully broken request. Multi-line values terminate on the next `@directive`, on a blank line followed by a request line, or at EOF. Blank lines between content paragraphs are preserved as `\n\n` so markdown-formatted descriptions round-trip cleanly. ([#1](https://github.com/doossee/ivkjs/pull/1))
+
 ## [0.1.0] — 2026-04-16
 
 ### Added
