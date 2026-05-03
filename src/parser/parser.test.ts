@@ -129,4 +129,120 @@ GET https://api.example.com/a
     expect(result.method).toBe('GET');
     expect(result.url).toBe('https://example.com/a');
   });
+
+  /* ---------------- multi-line directive values ---------------- */
+  // Until this fix, a directive value was strictly the rest of its own line.
+  // If the user wrote markdown across multiple lines after `@description ...`,
+  // every continuation line became either a garbage header or part of body,
+  // and the actual `POST {{baseUrl}}/api` request line ended up dumped into
+  // body. Repro: real-world ivk files in collections like `Ovi/invoker`.
+
+  it('joins continuation lines into a multi-line @description value', () => {
+    const input = `@name X
+@description # Heading
+First paragraph of description.
+Second paragraph.
+@tag api
+
+POST https://api.example.com/a
+`;
+    const result = parseIvk(input);
+    expect(result.directives.description).toBe(
+      '# Heading\nFirst paragraph of description.\nSecond paragraph.',
+    );
+    expect(result.directives.name).toBe('X');
+    expect(result.directives.tag).toBe('api');
+    expect(result.method).toBe('POST');
+    expect(result.url).toBe('https://api.example.com/a');
+    // Critical regression assertion: the request line MUST NOT leak into
+    // body or headers.
+    expect(result.body).toBe('');
+    expect(Object.keys(result.headers)).toHaveLength(0);
+  });
+
+  it('preserves blank-line paragraph breaks inside a multi-line directive', () => {
+    const input = `@description Para one.
+
+Para two.
+@tag x
+
+GET https://api.example.com/a
+`;
+    const result = parseIvk(input);
+    expect(result.directives.description).toBe('Para one.\n\nPara two.');
+  });
+
+  it('terminates multi-line directive when blank line is followed by request line', () => {
+    const input = `@description Just a description that spans
+several lines.
+
+GET https://api.example.com/a
+`;
+    const result = parseIvk(input);
+    expect(result.directives.description).toBe(
+      'Just a description that spans\nseveral lines.',
+    );
+    expect(result.method).toBe('GET');
+  });
+
+  it('does not misinterpret markdown content as headers', () => {
+    // Real-world repro: @description with markdown table + JSON code blocks.
+    // The previous parser interpreted every `key: value` pattern as an HTTP
+    // header — turning `"jsonrpc": "2.0",` into header `"jsonrpc": "2.0",`.
+    const input = `@description # Title
+Some prose with a colon: not a header.
+\`\`\`json
+{ "jsonrpc": "2.0", "method": "Foo.bar" }
+\`\`\`
+@tag api
+
+POST https://api.example.com/api
+Content-Type: application/json
+
+{"hello":"world"}
+`;
+    const result = parseIvk(input);
+    // None of the markdown lines should leak into headers.
+    expect(result.headers).toEqual({ 'Content-Type': 'application/json' });
+    expect(result.body).toBe('{"hello":"world"}');
+    expect(result.method).toBe('POST');
+    expect(result.url).toBe('https://api.example.com/api');
+    expect(result.directives.description).toContain('# Title');
+    expect(result.directives.description).toContain('"jsonrpc": "2.0"');
+  });
+
+  it('handles multi-line values for unknown @directives (forward compat)', () => {
+    const input = `@notes Line one.
+Line two.
+Line three.
+
+GET https://example.com/x
+`;
+    const result = parseIvk(input);
+    expect(result.directives.notes).toBe('Line one.\nLine two.\nLine three.');
+  });
+
+  it('a continuation line beginning with another @ starts a NEW directive', () => {
+    const input = `@description first directive value
+@tag second-directive
+
+GET https://example.com/x
+`;
+    const result = parseIvk(input);
+    expect(result.directives.description).toBe('first directive value');
+    expect(result.directives.tag).toBe('second-directive');
+  });
+
+  it('a continuation line that looks like a request line starts the request', () => {
+    // Edge case: user wrote something doc-y on its own line that happens to
+    // start with an HTTP method + space + URL-shaped token. We treat it as
+    // the actual request, not as multi-line description content.
+    const input = `@description short description
+GET https://example.com/api
+`;
+    const result = parseIvk(input);
+    expect(result.directives.description).toBe('short description');
+    expect(result.method).toBe('GET');
+    expect(result.url).toBe('https://example.com/api');
+  });
 });
