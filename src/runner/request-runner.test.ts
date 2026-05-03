@@ -93,6 +93,68 @@ describe('RequestRunner', () => {
     expect(env.get('_marker')).toBe('pre-ran');
   });
 
+  it('pre-script env.set is applied to the current request before variables resolve', async () => {
+    // Documented contract from EnvManager.get priority docstring:
+    //   "runtime (set by `> pre` scripts in the current request) >
+    //    active environment > collection defaults"
+    //
+    // Before the fix, RequestRunner.run resolved variables BEFORE running
+    // the pre script, so anything pre set via `ivk.env.set("X","Y")` only
+    // applied to FUTURE requests — never the current one. The body left
+    // {{X}} as a literal placeholder, which silently sent broken payloads.
+    //
+    // This test pins the documented behaviour: pre runs first, the env
+    // mutation lands, then the body template resolves with the fresh value.
+    const transport = new StubTransport({
+      status: 200,
+      headers: {},
+      body: '{}',
+      timeMs: 5,
+    });
+    const runner = new RequestRunner(env, transport);
+
+    await runner.run(
+      makeRequest({
+        url: 'https://api.example.com/echo',
+        body: '{"stamp":"{{nowIso}}"}',
+        scripts: {
+          pre: 'ivk.env.set("nowIso", "2026-05-03T00:00:00Z");',
+          post: '',
+          test: '',
+        },
+      }),
+    );
+
+    expect(transport.calls[0]!.body).toBe('{"stamp":"2026-05-03T00:00:00Z"}');
+  });
+
+  it('pre-script env.set also reaches URL and headers in the current request', async () => {
+    // Same lifecycle contract, but exercising the other resolved fields so
+    // the fix can't accidentally cover only one of them.
+    const transport = new StubTransport({
+      status: 200,
+      headers: {},
+      body: '{}',
+      timeMs: 5,
+    });
+    const runner = new RequestRunner(env, transport);
+
+    await runner.run(
+      makeRequest({
+        url: '{{baseUrl}}/u/{{userId}}',
+        headers: { 'X-Trace': '{{traceId}}' },
+        body: '',
+        scripts: {
+          pre: 'ivk.env.set("userId", "42"); ivk.env.set("traceId", "tr-1");',
+          post: '',
+          test: '',
+        },
+      }),
+    );
+
+    expect(transport.calls[0]!.url).toBe('https://api.example.com/u/42');
+  });
+
   it('runs post-script after transport (can read response)', async () => {
     const transport = new StubTransport({
       status: 200,

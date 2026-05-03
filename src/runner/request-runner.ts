@@ -25,15 +25,20 @@ export class RequestRunner {
     // Clone request so mutations don't affect the original
     const req: IvkRequest = JSON.parse(JSON.stringify(request));
 
-    // Resolve variables in URL, headers, body
+    // Run pre-script first (can mutate req directly AND set runtime env vars)
+    // — must run BEFORE we resolve variables, so anything pre's
+    // ivk.env.set("X", "Y") publishes is visible to {{X}} substitutions in
+    // url/body/headers below. Documented contract from EnvManager.get:
+    //   runtime (set by `> pre` of the current request) > active env > defaults.
+    this.scriptRunner.runPreScript(req.scripts.pre, req);
+
+    // Resolve variables in URL, headers, body — now reads the env that pre
+    // just published, plus whatever pre wrote directly into req.
     req.url = this.env.resolveVariables(req.url);
     req.body = this.env.resolveVariables(req.body);
     for (const [key, value] of Object.entries(req.headers)) {
       req.headers[key] = this.env.resolveVariables(value);
     }
-
-    // Run pre-script (can mutate req)
-    this.scriptRunner.runPreScript(req.scripts.pre, req);
 
     // Parse timeout directive → ms
     let timeout: number | undefined;
