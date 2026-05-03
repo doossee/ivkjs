@@ -39,6 +39,7 @@ Each module exports through its own `index.ts`. Cross-module imports go through 
 **Variable resolution priority** (`EnvManager.get`): runtime (set by `> pre` scripts in the current request) > active environment > collection defaults (future). **Undefined names stay literal** — `{{missingVar}}` is sent as-is. This is intentional: fail visibly, never silently empty.
 
 **Script sandbox is `new Function()`, not a security boundary.** Scripts receive:
+
 - `ivk` — `{ env, log, request }` in `pre`; `{ env, log }` in `post`/`test`
 - `res` — response object in `post`/`test` (status, body, headers, time)
 - `test` / `expect` — test harness in `test` block only
@@ -46,6 +47,7 @@ Each module exports through its own `index.ts`. Cross-module imports go through 
 See [`src/runner/script-runner.ts`](src/runner/script-runner.ts).
 
 **Request lifecycle** (`RequestRunner.run`):
+
 1. Clone the request (UI state must not be mutated)
 2. Run `> pre` script (may mutate the cloned request directly AND set env vars)
 3. Resolve variables in url/headers/body — reads any env vars `pre` just set
@@ -54,7 +56,7 @@ See [`src/runner/script-runner.ts`](src/runner/script-runner.ts).
 6. Run `> test` script (produces `TestResult[]`)
 7. Return `{ response, testResults, logs }`
 
-**Why pre runs before resolve:** the `EnvManager.get` priority docs say "runtime (set by `> pre` of the current request) > active env > defaults" — that's only true if pre runs first. Older versions ran resolve first, so any env var pre set only affected *future* requests; the current request still saw the un-resolved literal `{{X}}`. Fixed in 0.1.2 ([#2](https://github.com/doossee/ivkjs/pull/2)).
+**Why pre runs before resolve:** the `EnvManager.get` priority docs say "runtime (set by `> pre` of the current request) > active env > defaults" — that's only true if pre runs first. Older versions ran resolve first, so any env var pre set only affected _future_ requests; the current request still saw the un-resolved literal `{{X}}`. Fixed in 0.1.2 ([#2](https://github.com/doossee/ivkjs/pull/2)).
 
 **Transport contract:** `send(NormalizedRequest) => Promise<NormalizedResponse>`. Transports never throw on HTTP errors — they return `{ status: 0, error: "..." }` so the runner can surface the failure without unwinding the stack.
 
