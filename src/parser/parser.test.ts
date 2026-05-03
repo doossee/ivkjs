@@ -179,9 +179,7 @@ several lines.
 GET https://api.example.com/a
 `;
     const result = parseIvk(input);
-    expect(result.directives.description).toBe(
-      'Just a description that spans\nseveral lines.',
-    );
+    expect(result.directives.description).toBe('Just a description that spans\nseveral lines.');
     expect(result.method).toBe('GET');
   });
 
