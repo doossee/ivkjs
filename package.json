@@ -1,6 +1,6 @@
 {
   "name": "ivkjs",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "The .ivk format parser, script sandbox, and HTTP runner — core of the Invoker API client.",
   "type": "module",
   "main": "./dist/index.cjs",

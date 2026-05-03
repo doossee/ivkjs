@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.2] — 2026-05-03
+
 ### Fixed
 
 - `RequestRunner.run` now executes the `> pre` script **before** resolving `{{variable}}` placeholders in URL, body, and headers. Previously the order was reversed, so anything `pre` published via `ivk.env.set("X", "Y")` only applied to *future* requests — `{{X}}` in the current request stayed literal. This silently broke the documented `EnvManager.get` priority ("runtime set by `> pre` of the current request > active environment > defaults"). Direct mutations like `ivk.request.headers["X-Foo"] = …` continue to work as before. ([#2](https://github.com/doossee/ivkjs/pull/2))
@@ -29,5 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `FetchTransport` — built-in implementation using `globalThis.fetch`
 - Extracted from `obsidian-invoker@0.1.0`
 
-[Unreleased]: https://github.com/doossee/ivkjs/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/doossee/ivkjs/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/doossee/ivkjs/releases/tag/v0.1.2
+[0.1.1]: https://github.com/doossee/ivkjs/releases/tag/v0.1.1
 [0.1.0]: https://github.com/doossee/ivkjs/releases/tag/v0.1.0
