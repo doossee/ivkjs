@@ -4,6 +4,21 @@ const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 
 const SCRIPT_REGEX = /^>\s*(pre|post|test)\s*\{/;
 
+/**
+ * True if `line` looks like a request line — `METHOD URL` or a bare
+ * `http(s)://...` URL on its own. Used inside the directives phase to detect
+ * when a continuation line should actually end multi-line directive
+ * processing and start the request.
+ */
+function looksLikeRequestLine(line: string): boolean {
+  const trimmed = line.trim();
+  if (trimmed === '') return false;
+  const parts = trimmed.split(/\s+/);
+  if (parts.length >= 2 && HTTP_METHODS.includes(parts[0] as HttpMethod)) return true;
+  if (parts.length === 1 && /^https?:\/\//.test(trimmed)) return true;
+  return false;
+}
+
 export function parseIvk(content: string): IvkRequest {
   const lines = content.split('\n');
   const directives: IvkDirectives = {};
@@ -17,6 +32,11 @@ export function parseIvk(content: string): IvkRequest {
   let currentScript: 'pre' | 'post' | 'test' | null = null;
   let scriptBraceDepth = 0;
   let scriptLines: string[] = [];
+
+  // Tracks the most recently-seen @directive so non-`@` continuation lines
+  // can be appended to its value (multi-line directives). Reset to null
+  // each time we transition out of the directives phase.
+  let lastDirectiveKey: string | null = null;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]!;
@@ -58,17 +78,61 @@ export function parseIvk(content: string): IvkRequest {
     }
 
     if (phase === 'directives') {
-      if (trimmed === '') continue;
+      if (trimmed === '') {
+        // Blank line: peek ahead. If the next non-blank line is a request line
+        // (or EOF), this blank ends the directives phase — fall through and
+        // let the request-line block pick up the next iteration. Otherwise
+        // it's a paragraph break inside the current multi-line directive
+        // value; preserve it so markdown formatting round-trips.
+        let nextNonBlank: string | undefined;
+        for (let j = i + 1; j < lines.length; j++) {
+          if (lines[j]!.trim() !== '') {
+            nextNonBlank = lines[j];
+            break;
+          }
+        }
+        if (nextNonBlank === undefined || looksLikeRequestLine(nextNonBlank)) {
+          // End of directives. The next non-blank line will be picked up
+          // by the request-line phase below.
+          lastDirectiveKey = null;
+          continue;
+        }
+        // Paragraph break inside the current directive's value.
+        if (lastDirectiveKey) {
+          directives[lastDirectiveKey] += '\n';
+        }
+        continue;
+      }
       if (trimmed.startsWith('@')) {
         const spaceIdx = trimmed.indexOf(' ');
         if (spaceIdx > 0) {
           const key = trimmed.substring(1, spaceIdx);
           const value = trimmed.substring(spaceIdx + 1);
           directives[key] = value;
+          lastDirectiveKey = key;
+        } else {
+          // `@key` with no value
+          const key = trimmed.substring(1);
+          directives[key] = '';
+          lastDirectiveKey = key;
         }
         continue;
       }
-      phase = 'request-line';
+      // Non-blank, non-@ line. If it looks like a request line, transition
+      // to the request-line phase and re-process this line there. Otherwise
+      // it's a continuation of the most recent directive's value.
+      if (looksLikeRequestLine(trimmed)) {
+        phase = 'request-line';
+        // fall through to request-line block below
+      } else {
+        if (lastDirectiveKey) {
+          directives[lastDirectiveKey] += '\n' + line;
+        }
+        // No prior directive to attach to → silently drop the orphan line
+        // (matches old behavior of falling through to header-parsing
+        // garbage; the new behavior just doesn't pollute headers/body).
+        continue;
+      }
     }
 
     if (phase === 'request-line') {
